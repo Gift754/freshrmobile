@@ -1,0 +1,7 @@
+requests
+numpy
+scikit-learn
+joblib
+# only for --backend embeddings
+# torch
+# transformers

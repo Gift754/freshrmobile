@@ -1,0 +1,4 @@
+{"id": "j1", "title": "Junior Full-Stack Developer", "description": "Build web apps with React and Node.js, MySQL or PostgreSQL databases, REST APIs. Git and Docker are a plus."}
+{"id": "j2", "title": "Mobile App Developer (Flutter)", "description": "Ship Android and iOS apps with Flutter and Firebase. M-Pesa integration experience welcome.", "required_skills": ["Flutter", "Dart", "Firebase", "M-Pesa"]}
+{"id": "j3", "title": "Data Analyst / ML Intern", "description": "Python, pandas, NumPy, scikit-learn, Jupyter notebooks and data visualization."}
+{"id": "j4", "title": "DevOps Engineer", "description": "Docker, Kubernetes, Terraform, CI/CD pipelines on AWS."}
