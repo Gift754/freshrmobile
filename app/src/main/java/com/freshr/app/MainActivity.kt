@@ -50,6 +50,8 @@ fun FreshrRootNavigation(onboardingVm: OnboardingViewModel = viewModel()) {
         )
 
         PublicRoute.LOGIN -> LoginScreen(
+            initialEmail = onboardingVm.prefilledEmail,
+            successMessage = onboardingVm.authSuccessMessage,
             onLoginSubmit = { email, pass -> onboardingVm.loginUser(email, pass) },
             onContinueWithGoogle = { onboardingVm.continueWithGoogle() },
             onNavigateForgotPassword = { onboardingVm.currentPublicRoute = PublicRoute.FORGOT_PASSWORD },

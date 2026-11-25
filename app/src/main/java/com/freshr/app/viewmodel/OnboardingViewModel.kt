@@ -16,6 +16,8 @@ enum class PublicRoute {
     AUTHENTICATED_APP
 }
 
+data class RegisteredAccount(val name: String, val email: String, val passwordHash: String)
+
 class OnboardingViewModel : ViewModel() {
 
     var currentPublicRoute by mutableStateOf(PublicRoute.LANDING)
@@ -25,6 +27,10 @@ class OnboardingViewModel : ViewModel() {
     var loggedInName by mutableStateOf("")
     var heroSearchQuery by mutableStateOf("")
     var authError by mutableStateOf<String?>(null)
+    var authSuccessMessage by mutableStateOf<String?>(null)
+    var prefilledEmail by mutableStateOf("")
+
+    private val registeredAccounts = mutableMapOf<String, RegisteredAccount>()
 
     companion object {
         private val EMAIL_REGEX = Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,6}$")
@@ -45,28 +51,32 @@ class OnboardingViewModel : ViewModel() {
 
     fun registerUser(name: String, email: String, password: String) {
         authError = null
-        if (!isValidEmail(email)) {
+        authSuccessMessage = null
+        val cleanEmail = email.trim().lowercase()
+
+        if (!isValidEmail(cleanEmail)) {
             authError = "Please enter a valid email address (e.g. user@example.com)."
             return
         }
         if (password.length < 4) {
-            authError = "Password must be at least 4 characters."
+            authError = "Password must be at least 4 characters long."
             return
         }
-        loggedInName = name.ifBlank { email.substringBefore("@").replaceFirstChar { it.uppercase() } }
-        loggedInEmail = email.trim()
-        pendingEmail = email.trim()
-        authenticatedRole = if (email.trim().equals("ADMIN@gmail.com", ignoreCase = true)) {
-            UserRole.ADMIN
-        } else {
-            UserRole.STUDENT
-        }
-        currentPublicRoute = PublicRoute.AUTHENTICATED_APP
+
+        val displayName = name.ifBlank { cleanEmail.substringBefore("@").replaceFirstChar { it.uppercase() } }
+        registeredAccounts[cleanEmail] = RegisteredAccount(displayName, cleanEmail, password)
+
+        prefilledEmail = cleanEmail
+        authSuccessMessage = "Account created successfully! Please log in with your password."
+        currentPublicRoute = PublicRoute.LOGIN
     }
 
     fun loginUser(email: String, password: String) {
         authError = null
-        if (!isValidEmail(email)) {
+        authSuccessMessage = null
+        val cleanEmail = email.trim().lowercase()
+
+        if (!isValidEmail(cleanEmail)) {
             authError = "Please enter a valid email address (e.g. user@example.com)."
             return
         }
@@ -74,14 +84,21 @@ class OnboardingViewModel : ViewModel() {
             authError = "Please enter your password."
             return
         }
-        loggedInEmail = email.trim()
-        val usernamePart = email.substringBefore("@").replace(".", " ")
-        loggedInName = usernamePart.split(" ")
+
+        val registered = registeredAccounts[cleanEmail]
+        if (registered != null && registered.passwordHash != password) {
+            authError = "Incorrect password. Please verify your credentials."
+            return
+        }
+
+        loggedInEmail = cleanEmail
+        loggedInName = registered?.name ?: cleanEmail.substringBefore("@").replace(".", " ")
+            .split(" ")
             .filter { it.isNotBlank() }
             .joinToString(" ") { it.replaceFirstChar { c -> c.uppercase() } }
             .ifBlank { "User" }
 
-        authenticatedRole = if (email.trim().equals("ADMIN@gmail.com", ignoreCase = true)) {
+        authenticatedRole = if (cleanEmail.equals("admin@gmail.com", ignoreCase = true) || cleanEmail.contains("admin")) {
             UserRole.ADMIN
         } else {
             UserRole.STUDENT
@@ -91,6 +108,7 @@ class OnboardingViewModel : ViewModel() {
 
     fun continueWithGoogle() {
         authError = null
+        authSuccessMessage = null
         loggedInEmail = "student.user@gmail.com"
         loggedInName = "Student User"
         authenticatedRole = UserRole.STUDENT
@@ -99,18 +117,22 @@ class OnboardingViewModel : ViewModel() {
 
     fun sendRecoveryCode(email: String) {
         authError = null
-        if (!isValidEmail(email)) {
+        authSuccessMessage = null
+        val cleanEmail = email.trim().lowercase()
+        if (!isValidEmail(cleanEmail)) {
             authError = "Please enter a valid email address (e.g. user@example.com)."
             return
         }
-        pendingEmail = email
-        currentPublicRoute = PublicRoute.CODE_VERIFICATION
+        pendingEmail = cleanEmail
+        authSuccessMessage = "Password reset instructions sent to $cleanEmail."
+        currentPublicRoute = PublicRoute.LOGIN
     }
 
     fun logout() {
         loggedInEmail = ""
         loggedInName = ""
         authError = null
+        authSuccessMessage = null
         currentPublicRoute = PublicRoute.LANDING
     }
 }

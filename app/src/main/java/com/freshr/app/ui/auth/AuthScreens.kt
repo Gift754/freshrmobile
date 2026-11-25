@@ -309,13 +309,15 @@ fun CreateAccountScreen(
 // 2. Log in.jpg
 @Composable
 fun LoginScreen(
+    initialEmail: String = "",
+    successMessage: String? = null,
     onLoginSubmit: (String, String) -> Unit,
     onContinueWithGoogle: () -> Unit,
     onNavigateForgotPassword: () -> Unit,
     onNavigateRegister: () -> Unit,
     onNavigateLanding: () -> Unit
 ) {
-    var email by remember { mutableStateOf("") }
+    var email by remember(initialEmail) { mutableStateOf(initialEmail) }
     var password by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -325,6 +327,24 @@ fun LoginScreen(
         onRegisterClick = onNavigateRegister
     ) {
         Text("Log In", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+
+        successMessage?.let { msg ->
+            Surface(
+                color = Color(0xFFDDF5E4),
+                shape = RoundedCornerShape(8.dp),
+                border = BorderStroke(1.dp, Color(0xFF8FD19E)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = msg,
+                    color = Color(0xFF1E7E34),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(10.dp)
+                )
+            }
+        }
 
         AuthLabeledField(
             label = "E-mail",

@@ -15,6 +15,30 @@ import com.freshr.app.data.JobMatchingEngine
 import com.freshr.app.model.*
 import kotlinx.coroutines.launch
 
+data class UserStudentSession(
+    val email: String,
+    val name: String,
+    val githubUrl: String = "",
+    val isGitHubSynced: Boolean = false,
+    val githubProfile: GitHubProfileData? = null,
+    val coreSkills: List<String> = emptyList(),
+    val topMatches: List<StudentJobMatch> = emptyList(),
+    val applications: List<StudentApplication> = emptyList()
+)
+
+object StudentSessionStore {
+    private val sessions = mutableMapOf<String, UserStudentSession>()
+
+    fun loadSession(email: String): UserStudentSession? {
+        return sessions[email.trim().lowercase()]
+    }
+
+    fun saveSession(session: UserStudentSession) {
+        if (session.email.isBlank()) return
+        sessions[session.email.trim().lowercase()] = session
+    }
+}
+
 class StudentViewModel : ViewModel() {
 
     var currentRoute by mutableStateOf(StudentRoute.HOME)
@@ -36,117 +60,168 @@ class StudentViewModel : ViewModel() {
     var cvExportStatus by mutableStateOf<String?>(null)
     var showLogoutDialog by mutableStateOf(false)
 
-    init {
-        val sampleJobs = listOf(
-            StudentJobMatch(
-                id = "job_py_1",
-                position = "Backend Developer (Python)",
-                company = "TechCom Solution",
-                location = "Remote",
-                employmentType = "Full-time",
-                salary = "KES 50,000",
-                description = "Design, build, and maintain backend APIs and data pipelines using Python and Django/FastAPI.",
-                experience = listOf(
-                    "Proficiency in Python and Django/FastAPI",
-                    "Experience designing RESTful APIs",
-                    "Familiarity with PostgreSQL and Git",
-                    "Strong debugging and testing practices"
-                ),
-                matchPercentage = 92
+    private val defaultSampleJobs = listOf(
+        StudentJobMatch(
+            id = "job_py_1",
+            position = "Backend Developer (Python)",
+            company = "TechCom Solution",
+            location = "Remote",
+            employmentType = "Full-time",
+            salary = "KES 50,000",
+            description = "Design, build, and maintain backend APIs and data pipelines using Python and Django/FastAPI.",
+            experience = listOf(
+                "Proficiency in Python and Django/FastAPI",
+                "Experience designing RESTful APIs",
+                "Familiarity with PostgreSQL and Git",
+                "Strong debugging and testing practices"
             ),
-            StudentJobMatch(
-                id = "job_kt_2",
-                position = "Android Mobile Developer (Kotlin)",
-                company = "Nairobi Tech Hub",
-                location = "Nairobi (Hybrid)",
-                employmentType = "Full-time",
-                salary = "KES 75,000",
-                description = "Develop modern Android applications using Kotlin, Jetpack Compose, Coroutines, and ViewModel architecture.",
-                experience = listOf(
-                    "Solid understanding of Kotlin and Android SDK",
-                    "Experience with Jetpack Compose UI",
-                    "REST API integration with Retrofit/OkHttp",
-                    "Git version control and unit testing"
-                ),
-                matchPercentage = 88
+            matchPercentage = 92
+        ),
+        StudentJobMatch(
+            id = "job_kt_2",
+            position = "Android Mobile Developer (Kotlin)",
+            company = "Nairobi Tech Hub",
+            location = "Nairobi (Hybrid)",
+            employmentType = "Full-time",
+            salary = "KES 75,000",
+            description = "Develop modern Android applications using Kotlin, Jetpack Compose, Coroutines, and ViewModel architecture.",
+            experience = listOf(
+                "Solid understanding of Kotlin and Android SDK",
+                "Experience with Jetpack Compose UI",
+                "REST API integration with Retrofit/OkHttp",
+                "Git version control and unit testing"
             ),
-            StudentJobMatch(
-                id = "job_js_3",
-                position = "Full Stack Engineer (React & Node.js)",
-                company = "AfriPay Solutions",
-                location = "Remote",
-                employmentType = "Full-time",
-                salary = "KES 60,000",
-                description = "Build responsive web interfaces and microservices using React, Node.js, and TypeScript.",
-                experience = listOf(
-                    "Experience with React and Node.js",
-                    "Proficiency in TypeScript and RESTful services",
-                    "Database management with MongoDB or PostgreSQL"
-                ),
-                matchPercentage = 82
+            matchPercentage = 88
+        ),
+        StudentJobMatch(
+            id = "job_js_3",
+            position = "Full Stack Engineer (React & Node.js)",
+            company = "AfriPay Solutions",
+            location = "Remote",
+            employmentType = "Full-time",
+            salary = "KES 60,000",
+            description = "Build responsive web interfaces and microservices using React, Node.js, and TypeScript.",
+            experience = listOf(
+                "Experience with React and Node.js",
+                "Proficiency in TypeScript and RESTful services",
+                "Database management with MongoDB or PostgreSQL"
             ),
-            StudentJobMatch(
-                id = "job_dev_4",
-                position = "DevOps & Cloud Specialist",
-                company = "CloudScale Africa",
-                location = "Remote",
-                employmentType = "Contract",
-                salary = "KES 90,000",
-                description = "Manage CI/CD pipelines, Docker containerization, and AWS cloud infrastructure deployment.",
-                experience = listOf(
-                    "Experience with Docker, Kubernetes, and AWS",
-                    "Linux administration and Shell scripting",
-                    "Automated deployment workflows with GitHub Actions"
-                ),
-                matchPercentage = 75
+            matchPercentage = 82
+        ),
+        StudentJobMatch(
+            id = "job_dev_4",
+            position = "DevOps & Cloud Specialist",
+            company = "CloudScale Africa",
+            location = "Remote",
+            employmentType = "Contract",
+            salary = "KES 90,000",
+            description = "Manage CI/CD pipelines, Docker containerization, and AWS cloud infrastructure deployment.",
+            experience = listOf(
+                "Experience with Docker, Kubernetes, and AWS",
+                "Linux administration and Shell scripting",
+                "Automated deployment workflows with GitHub Actions"
             ),
-            StudentJobMatch(
-                id = "job_data_5",
-                position = "Data Analyst & Python Developer",
-                company = "DataMetrics East Africa",
-                location = "Nairobi (On-site)",
-                employmentType = "Full-time",
-                salary = "KES 55,000",
-                description = "Analyze large datasets, write ETL pipelines, and generate actionable insights using Python and SQL.",
-                experience = listOf(
-                    "Proficiency in Python (Pandas, NumPy, Matplotlib)",
-                    "Strong SQL query writing and database design",
-                    "Data visualization and reporting experience"
-                ),
-                matchPercentage = 79
+            matchPercentage = 75
+        ),
+        StudentJobMatch(
+            id = "job_data_5",
+            position = "Data Analyst & Python Developer",
+            company = "DataMetrics East Africa",
+            location = "Nairobi (On-site)",
+            employmentType = "Full-time",
+            salary = "KES 55,000",
+            description = "Analyze large datasets, write ETL pipelines, and generate actionable insights using Python and SQL.",
+            experience = listOf(
+                "Proficiency in Python (Pandas, NumPy, Matplotlib)",
+                "Strong SQL query writing and database design",
+                "Data visualization and reporting experience"
             ),
-            StudentJobMatch(
-                id = "job_ui_6",
-                position = "Frontend Developer (UI/UX & Web)",
-                company = "CreativeLabs Ltd",
-                location = "Remote",
-                employmentType = "Full-time",
-                salary = "KES 48,000",
-                description = "Craft pixel-perfect user interfaces and web applications using HTML, CSS, JavaScript, and Tailwind.",
-                experience = listOf(
-                    "Proficiency in HTML5, CSS3, JavaScript, and Tailwind CSS",
-                    "Responsive design and cross-browser compatibility",
-                    "Figma to code implementation"
-                ),
-                matchPercentage = 71
-            )
+            matchPercentage = 79
+        ),
+        StudentJobMatch(
+            id = "job_ui_6",
+            position = "Frontend Developer (UI/UX & Web)",
+            company = "CreativeLabs Ltd",
+            location = "Remote",
+            employmentType = "Full-time",
+            salary = "KES 48,000",
+            description = "Craft pixel-perfect user interfaces and web applications using HTML, CSS, JavaScript, and Tailwind.",
+            experience = listOf(
+                "Proficiency in HTML5, CSS3, JavaScript, and Tailwind CSS",
+                "Responsive design and cross-browser compatibility",
+                "Figma to code implementation"
+            ),
+            matchPercentage = 71
         )
+    )
 
-        topMatches.addAll(sampleJobs)
+    init {
+        resetToDefaults()
+    }
 
-        val firstJob = topMatches.first()
+    private fun resetToDefaults() {
+        topMatches.clear()
+        topMatches.addAll(defaultSampleJobs)
+
+        applications.clear()
+        val firstJob = defaultSampleJobs.first()
         applications.addAll(
             listOf(
                 StudentApplication("app_1", firstJob, ApplicationStatus.HIRED, "01/06/2026", "v2_ai_tailored.pdf"),
-                StudentApplication("app_2", sampleJobs[1], ApplicationStatus.PENDING, "02/06/2026", "v1_ai_tailored.pdf"),
-                StudentApplication("app_3", sampleJobs[2], ApplicationStatus.REJECTED, "03/06/2026", "base_cv.pdf")
+                StudentApplication("app_2", defaultSampleJobs[1], ApplicationStatus.PENDING, "02/06/2026", "v1_ai_tailored.pdf"),
+                StudentApplication("app_3", defaultSampleJobs[2], ApplicationStatus.REJECTED, "03/06/2026", "base_cv.pdf")
             )
         )
     }
 
     fun setUserDetails(email: String, name: String) {
-        if (email.isNotBlank()) userEmail = email
+        val cleanEmail = email.trim().lowercase()
+        if (cleanEmail.isBlank()) return
+        if (userEmail == cleanEmail && userName == name && isGitHubSynced) return
+
+        saveCurrentSession()
+
+        userEmail = cleanEmail
         if (name.isNotBlank()) userName = name
+
+        val saved = StudentSessionStore.loadSession(cleanEmail)
+        if (saved != null) {
+            githubUrl = saved.githubUrl
+            isGitHubSynced = saved.isGitHubSynced
+            githubProfile = saved.githubProfile
+            coreSkills.clear()
+            coreSkills.addAll(saved.coreSkills)
+            if (saved.topMatches.isNotEmpty()) {
+                topMatches.clear()
+                topMatches.addAll(saved.topMatches)
+            }
+            if (saved.applications.isNotEmpty()) {
+                applications.clear()
+                applications.addAll(saved.applications)
+            }
+        } else {
+            githubUrl = ""
+            isGitHubSynced = false
+            githubProfile = null
+            coreSkills.clear()
+            resetToDefaults()
+        }
+    }
+
+    private fun saveCurrentSession() {
+        if (userEmail.isBlank()) return
+        StudentSessionStore.saveSession(
+            UserStudentSession(
+                email = userEmail,
+                name = userName,
+                githubUrl = githubUrl,
+                isGitHubSynced = isGitHubSynced,
+                githubProfile = githubProfile,
+                coreSkills = coreSkills.toList(),
+                topMatches = topMatches.toList(),
+                applications = applications.toList()
+            )
+        )
     }
 
     fun syncGitHubProfile() {
@@ -182,7 +257,6 @@ class StudentViewModel : ViewModel() {
                         topMatches.addAll(rankedJobs)
                     }
                 }.onFailure {
-                    // FastAPI ML model backend offline: use local on-device JobMatchingEngine model
                     val rankedJobs = JobMatchingEngine.rankAndSortJobs(cleanedSkills, topMatches.toList())
                     topMatches.clear()
                     topMatches.addAll(rankedJobs)
@@ -190,6 +264,7 @@ class StudentViewModel : ViewModel() {
 
                 isGitHubSynced = true
                 isSyncing = false
+                saveCurrentSession()
             }.onFailure { err ->
                 syncErrorMessage = err.message ?: "Failed to sync GitHub profile."
                 val fallbackSkills = listOf("Python", "Kotlin", "Django", "REST APIs", "Git", "PostgreSQL")
@@ -203,6 +278,7 @@ class StudentViewModel : ViewModel() {
 
                 isGitHubSynced = true
                 isSyncing = false
+                saveCurrentSession()
             }
         }
     }
@@ -219,10 +295,12 @@ class StudentViewModel : ViewModel() {
                 tailoredCvVersion = "ai_matched_${job.id}.pdf"
             )
         )
+        saveCurrentSession()
     }
 
     fun deleteApplication(appId: String) {
         applications.removeAll { it.id == appId }
+        saveCurrentSession()
     }
 
     fun customizeResumeWithAI(targetJob: StudentJobMatch? = topMatches.firstOrNull()) {
